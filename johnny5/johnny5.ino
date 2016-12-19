@@ -1,5 +1,3 @@
-
-
 /*
 
   # Product: 6 DOF Sensor-MPU6050
@@ -14,15 +12,13 @@
 
 
 
-//#include <Wire.h>
-//#include "I2Cdev.h"
-//#include "MPU6050.h"
-#include "HMC5983.h"
+#include "Wire.h"
+#include "I2Cdev.h"
+#include "MPU6050.h"
 #include "linear_regression.h"
 
-//MPU6050 accelgyro;
+MPU6050 accelgyro;
 linear_regression lr_sonar(50);
-HMC5983 compass;
 
 int16_t ax, ay, az;  // define accel as ax,ay,az
 int16_t gx, gy, gz;  // define gyro as gx,gy,gz
@@ -130,6 +126,7 @@ int sonar_ping( int trigger_pin, int echo_pin )
 
 
 int sonar_cm( int usecs )
+
 {
   return (usecs / 59);
 }
@@ -137,6 +134,7 @@ int sonar_cm( int usecs )
 
 
 int sonar_in( int usecs )
+
 {
   return (usecs / 145);
 }
@@ -208,25 +206,52 @@ void moveMe( int way, int drive )
       break;
   }
 }
+#include "pitches.h"
+
+// notes in the melody:
+int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+};
+
+// note durations: 4 = quarter note, 8 = eighth note, etc.:
+int noteDurations[] = {
+  4, 8, 8, 4, 4, 4, 4, 4
+};
+
+void music() {
+  // iterate over the notes of the melody:
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second
+    // divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(8, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(8);
+  }
+}
 
 
-void setup() 
-{
-
-
-  //Wire.begin();      // join I2C bus
+void setup() {
+  music();
+  
+  Wire.begin();      // join I2C bus
 
   Serial.begin(115200);    //  initialize serial communication
   Serial.println("Initializing I2C devices...");
 
-  //accelgyro.initialize();
-
-  compass.begin(1);
+  accelgyro.initialize();
 
   // verify connection
 
-  //Serial.println("Testing device connections...");
-  //Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+  Serial.println("Testing device connections...");
+  Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
   pinMode(LED_PIN, OUTPUT);  // configure LED pin
   pinMode(TRIGGER, OUTPUT);  // configure sonar pin
@@ -289,8 +314,7 @@ void scan_area( int time_unit )
 }
 
 
-void loop() 
-{
+void loop() {
 
   int drive = 255;
 
@@ -308,10 +332,6 @@ void loop()
   fgy = gy;
   fgz = gz;
 
-  double comp = compass.read();
-
-  Serial.print( comp );
-  Serial.print( "\t" );
   Serial.print( acm );
   Serial.print( "\t" );
   Serial.println( lcm );
@@ -321,7 +341,7 @@ void loop()
   {
     if ( !roller_check() )
     {
-      acm = 0; // fool sonar
+      //acm = 0; // fool sonar
     }
   }
 
@@ -330,7 +350,7 @@ void loop()
     moveMe( me_backward, 255 );
     delay(10);
     moveMe( me_stop, 255 );
-
+    music();
     scan_area(15);
   }
   else
@@ -346,7 +366,7 @@ void loop()
         moveMe( me_spin_right, 255 );
       }
       delay(200);
-      scan_area(20);
+      scan_area(5);
     }
     moveMe( me_forward, drive );
   }
